@@ -1,0 +1,7 @@
+services:
+  data-app:
+    image: docker.io/bitnami/laravel:9
+    ports:
+      - '8080:8000'
+    volumes:
+      - './data_app:/app'
