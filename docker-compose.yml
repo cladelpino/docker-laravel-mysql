@@ -1,7 +1,48 @@
 services:
+  db:
+    image: mysql
+    ports: 
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: dbname
+      MYSQL_PASSWORD: test
+      MYSQL_ROOT_PASSWORD: test 
+    volumes:
+      - ./entrypoint:/docker-entrypoint-initdb.d
+      - ./conf:/etc/mysql/conf.d
+      - persistent:/var/lib/mysql
+      # - ./dumps:/home/dumps:ro
+    networks:
+      - default
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    links: 
+      - db:db
+    ports:
+      - 8000:80
+    networks:
+      - default
+    depends_on:
+      - db
+    environment:
+      MYSQL_USER: root
+      MYSQL_PASSWORD: test
+      MYSQL_ROOT_PASSWORD: test
   data-app:
     image: docker.io/bitnami/laravel:9
     ports:
       - '8080:8000'
+    links: 
+      - db:MySQL_Server_db_Auto_Generated_Server_Certificate
+    networks:
+      - default
+    depends_on:
+      - db
     volumes:
       - './data_app:/app'
+volumes:
+    persistent:
+networks:
+  default:
+    driver: bridge
