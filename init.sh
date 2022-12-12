@@ -49,6 +49,8 @@ if [[ $freshStart == 1 ]]; then
         docker-compose exec db mysql --user=root --password=test -e "CREATE DATABASE $p"
         docker-compose exec db sh -c "mysql --user=root --password=test $p < /home/dumps/$p.sql"
     done
+    docker-compose exec db sh -c "rm var/lib/mysql/*.pem && mysql_ssl_rsa_setup -v --suffix='db'"
+    docker-compose exec db sh -c 'cat var/lib/mysql/ca.pem' > ./app/ca.pem
     docker-compose down
 fi
 sed -i -e 's/^\([[:space:]]*\)\(-[[:space:]]*\.\/dumps:\/home\/dumps:ro[[:space:]]*\)$/\1#\2/g' docker-compose.yml
