@@ -41,16 +41,30 @@ if [[ $freshStart == 1 ]]; then
         echo "Waiting for DB server..."
         sleep 2
     done
-    for f in ./dumps/*.sql; do
+
+    for d in ./dumps/*/; do
+        
+        p=$(sed -e 's/\.\/dumps\/\(.*\)\//\1/g' <<< "$d")
+
+        echo $d
         echo "************"
-        echo "Loading dump from $f, this can take some time."
+        echo "Creating database $p"
         echo "************"
-        p=$(sed -e 's/\.\/dumps\/\(.*\)\.sql/\1/g' <<< "$f")
-        docker-compose exec db mysql --user=root --password=test -e "CREATE DATABASE $p"
-        docker-compose exec db sh -c "mysql --user=root --password=test $p < /home/dumps/$p.sql"
+        
+        docker-compose exec db mysql --user=root --password=test --show-warnings -e "CREATE DATABASE $p" &> >(tee -a >(sed "s/^/$(date) /" >> ./sqllog.log))
+        
+        for f in $d*; do
+            echo "************"
+            echo "Loading dump from $f"
+            echo "************"
+            t=$(sed -e "s/\.\/dumps\/"$p"\/\(.*\)/\1/g" <<< "$f")
+            echo $t
+            docker-compose exec db sh -c "mysql --user=root --password=test --show-warnings $p < /home/dumps/$p/$t" &> >(tee -a >(sed "s/^/$(date) /" >> ./sqllog.log))
+        done
     done
-    docker-compose exec db sh -c "rm var/lib/mysql/*.pem && mysql_ssl_rsa_setup -v --suffix='db'"
-    docker-compose exec db sh -c 'cat var/lib/mysql/ca.pem' > ./app/ca.pem
+
+    docker-compose exec db sh -c "rm var/lib/mysql/*.pem && mysql_ssl_rsa_setup -v --suffix='db'" &> >(tee -a >(sed "s/^/$(date) /" >> ./sqllog.log))
+    docker-compose exec db sh -c 'cat var/lib/mysql/ca.pem' > ./data_app/ca.pem &> >(tee -a >(sed "s/^/$(date) /" >> ./sqllog.log))
     docker-compose down
 fi
 sed -i -e 's/^\([[:space:]]*\)\(-[[:space:]]*\.\/dumps:\/home\/dumps:ro[[:space:]]*\)$/\1#\2/g' docker-compose.yml
